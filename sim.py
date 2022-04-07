@@ -22,7 +22,7 @@ clock = pygame.time.Clock()
 class Intent(enum.Enum):
     """What a car plans on doing in ONE unit of time."""
 
-    # Move forward at constant speed. 
+    # Move forward at constant speed.
     # No accel/decel, no lane change.
     NO_CHANGE = 0
     ACCELERATE = 3  # Increase horizontal speed
@@ -87,7 +87,7 @@ class Car:
         # X-position on the coordinate grid
         self.x_pos = self.CAR_X_START
 
-        # X-coordinate points per time unit 
+        # X-coordinate points per time unit
         # (how quickly the car advances forward per timestep)
         self.x_speed = 1
 
@@ -97,7 +97,7 @@ class Car:
         self.intent = Intent.NO_CHANGE  # Default: Just keep moving straight ahead.
 
     def send_intent(self):
-        """Send this car's intent into the network. All cars 
+        """Send this car's intent into the network. All cars
         will do this step first before taking any actions."""
         # Choose what to do
         if self.current_lane == self.goal_lane:
@@ -122,17 +122,17 @@ class Car:
         according to the agreed upon protocol."""
         other_cars_intents = self.network.get_messages(self.id)
         # TODO determine if your intent is feasible/safe given others' intents
-        # TODO change intent if issues arise (e.g., collision): 
-            # WARNING: Be careful how the simulator handles this, cars may not be able 
-            # to move yet if conflicts need to be resolved. But, it would be cool if 
-            # our algorithm resolved conflicts without any additional information/message passing,
-            # Which now that I think about it, probably could as long as protocols are defined for
-            # different types of conflicts and their solutions are deterministic (non-random)
-            # E.g., if the conflict is that a Car in lane 3 and a Car in lane 1 both want to merge
-            # to lane 2 but have the same x position, the leftmost car always accelerates and the
-            # rightmost car decelerates. If this always happens, then we should be able to resolve the conflict
-            # this cycle, and next cycle perform the lane change. Just push back the lane change til next
-            # cycle and perform the accelerate/decelerate now.
+        # TODO change intent if issues arise (e.g., collision):
+        # WARNING: Be careful how the simulator handles this, cars may not be able
+        # to move yet if conflicts need to be resolved. But, it would be cool if
+        # our algorithm resolved conflicts without any additional information/message passing,
+        # Which now that I think about it, probably could as long as protocols are defined for
+        # different types of conflicts and their solutions are deterministic (non-random)
+        # E.g., if the conflict is that a Car in lane 3 and a Car in lane 1 both want to merge
+        # to lane 2 but have the same x position, the leftmost car always accelerates and the
+        # rightmost car decelerates. If this always happens, then we should be able to resolve the conflict
+        # this cycle, and next cycle perform the lane change. Just push back the lane change til next
+        # cycle and perform the accelerate/decelerate now.
         pass
 
     def drive(self):
@@ -148,12 +148,12 @@ class Car:
         elif self.intent == Intent.LANE_CHANGE_DOWN:
             self.x_pos += self.x_speed
             self.current_lane += 1
-        
-        elif self.intent ==  Intent.ACCELERATE:
+
+        elif self.intent == Intent.ACCELERATE:
             self.x_speed += 1
             self.x_pos += self.x_speed
 
-        elif self.intent ==  Intent.DECELERATE:
+        elif self.intent == Intent.DECELERATE:
             self.x_speed -= 1
             self.x_pos += self.x_speed
 
@@ -178,18 +178,17 @@ class Car:
         pygame.draw.rect(surf, self.color, rect)
 
 
-
 def main():
     # Define objects on the screen
 
     network = CarNetwork()
-    
+
     # Car spawner: At a timestep (key), spawn the list of cars (value)
     car_spawner = {
         0: [Car(1, 4, Color("green"), network), Car(2, 5, Color("blue"), network)],
         1: [Car(3, 3, Color("red"), network)],
         3: [Car(5, 2, Color("brown"), network)],
-        5: [Car(2, 4, Color("white"), network), Car(1, 5, Color("orange"), network)]
+        5: [Car(2, 4, Color("white"), network), Car(1, 5, Color("orange"), network)],
     }
 
     cars_on_road = []
@@ -199,9 +198,9 @@ def main():
         Rect(0, 2 * i * road.top + road.top, WIDTH, LANE_DIVIDER_WIDTH)
         for i in range(NUM_LANES + 2)
     ]
-    
+
     simtime = 0  # Keeps track of simulation timestep
-    
+
     physics_clock = FRAMERATE // PHYSICS_RATE  # Start at max value for first draw
     paused = False  # Whether the sim is paused (pauses physics_clock)
     while True:
@@ -238,25 +237,25 @@ def main():
             # to see the initial state of the cars at t=0.
             for car in cars_on_road:
                 car.draw(screen)
-            
+
             # Each car sends its intent into the network.
             for car in cars_on_road:
                 car.send_intent()
-            
+
             # Cars resolve conflicts with each other.
             for car in cars_on_road:
                 car.resolve_conflicts()
-            
+
             # Cars move to new position.
             for car in cars_on_road:
                 car.drive()
-            
+
             print(f"Current simulation time: {simtime}")
             simtime += 1
 
         pygame.display.update()  # Update display buffer (redraw window)
         clock.tick(FRAMERATE)  # Limit framerate
-        
+
         if not paused:
             physics_clock += 1
 

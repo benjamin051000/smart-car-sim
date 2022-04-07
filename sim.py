@@ -118,23 +118,25 @@ def main():
             if event.type == pygame.QUIT:
                 return  # From main()
 
-        # draw lanes
+        # Draw new frame
         if physics_clock == FRAMERATE // PHYSICS_RATE:
             physics_clock = 0
 
             screen.fill(Color("darkgreen"))  # Draw grass
 
-            # draw our road here
+            # Draw road
             pygame.draw.rect(screen, Color("black"), road)
 
+            # Draw lanes
+            for lane in lanes:
+                pygame.draw.rect(screen, Color("white"), lane)
+
+            # Draw cars
             for car in cars:
                 car.draw(screen)
                 car.drive()
 
-            for lane in lanes:
-                pygame.draw.rect(screen, Color("white"), lane)
-
-        pygame.display.update()  # Updates display buffer (redraws window)
+        pygame.display.update()  # Update display buffer (redraw window)
         clock.tick(FRAMERATE)  # Limit framerate
         physics_clock += 1
 

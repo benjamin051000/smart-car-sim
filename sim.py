@@ -178,25 +178,30 @@ class Car:
         pygame.draw.rect(surf, self.color, rect)
 
 
+
 def main():
     # Define objects on the screen
 
     network = CarNetwork()
-    # On-screen objects (mostly rectangles)
-    cars = [
-        Car(1, 4, Color("green"), network),
-        Car(2, 5, Color("blue"), network),
-        Car(3, 3, Color("red"), network),
-        # Car(4, 4),
-        # Car(5, 1)
-    ]
+    
+    # Car spawner: At a timestep (key), spawn the list of cars (value)
+    car_spawner = {
+        0: [Car(1, 4, Color("green"), network), Car(2, 5, Color("blue"), network)],
+        1: [Car(3, 3, Color("red"), network)],
+        3: [Car(5, 2, Color("brown"), network)],
+        5: [Car(2, 4, Color("white"), network), Car(1, 5, Color("orange"), network)]
+    }
+
+    cars_on_road = []
 
     road = Rect(0, 50, WIDTH, HEIGHT - 100)
     lanes = [
         Rect(0, 2 * i * road.top + road.top, WIDTH, LANE_DIVIDER_WIDTH)
         for i in range(NUM_LANES + 2)
     ]
-
+    
+    simtime = 0  # Keeps track of simulation timestep
+    
     physics_clock = FRAMERATE // PHYSICS_RATE  # Start at max value for first draw
     paused = False  # Whether the sim is paused (pauses physics_clock)
     while True:
@@ -222,21 +227,32 @@ def main():
             for lane in lanes:
                 pygame.draw.rect(screen, Color("white"), lane)
 
+            # Spawn in new cars, if any.
+            try:
+                cars_on_road += car_spawner[simtime]
+            except KeyError:
+                pass
+
             # Draw cars to screen.
-            for car in cars:
+            # Draw before everything else, because it makes it easier
+            # to see the initial state of the cars at t=0.
+            for car in cars_on_road:
                 car.draw(screen)
             
             # Each car sends its intent into the network.
-            for car in cars:
+            for car in cars_on_road:
                 car.send_intent()
             
             # Cars resolve conflicts with each other.
-            for car in cars:
+            for car in cars_on_road:
                 car.resolve_conflicts()
             
             # Cars move to new position.
-            for car in cars:
+            for car in cars_on_road:
                 car.drive()
+            
+            print(f"Current simulation time: {simtime}")
+            simtime += 1
 
         pygame.display.update()  # Update display buffer (redraw window)
         clock.tick(FRAMERATE)  # Limit framerate

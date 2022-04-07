@@ -5,9 +5,9 @@ pygame.init()
 
 WIDTH, HEIGHT = 1200, 600
 
-number_of_lanes = 4
-lane_divider_width = 10
-lane_width = (700 - (lane_divider_width * number_of_lanes)) / (number_of_lanes + 1)
+NUM_LANES = 4
+LANE_DIVIDER_WIDTH = 10
+LANE_WIDTH = (700 - (LANE_DIVIDER_WIDTH * NUM_LANES)) / (NUM_LANES + 1)
 
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -30,8 +30,8 @@ while running:
     pygame.draw.rect(screen, Color('black'), road)
 
     # draw lanes
-    for i in range(number_of_lanes + 2):
-        lane = Rect(0, 2 * i * road.top + road.top, WIDTH, lane_divider_width)
+    for i in range(NUM_LANES + 2):
+        lane = Rect(0, 2 * i * road.top + road.top, WIDTH, LANE_DIVIDER_WIDTH)
 
         pygame.draw.rect(screen, Color('white'), lane)
 

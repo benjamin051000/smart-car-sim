@@ -6,7 +6,7 @@ from pygame import Color, Rect
 
 pygame.init()
 
-WIDTH, HEIGHT = 1200, 600
+WIDTH, HEIGHT = 1600, 600
 FRAMERATE = 60  # Frames per second
 # How many times per second the simulation updates (simulation timestep)
 PHYSICS_RATE = 2

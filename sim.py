@@ -6,7 +6,8 @@ pygame.init()
 
 WIDTH, HEIGHT = 1200, 600
 FRAMERATE = 60  # Frames per second
-PHYSICS_RATE = 2  # How many times per second the simulation updates (simulation timestep)
+# How many times per second the simulation updates (simulation timestep)
+PHYSICS_RATE = 2
 
 NUM_LANES = 4
 LANE_DIVIDER_WIDTH = 10
@@ -39,7 +40,6 @@ class Car:
 
         # X-position on the coordinate grid
         self.x_pos = self.CAR_X_START
-        print(f"X POS: {self.x_pos}")
 
         self.color = color
         self.network = network
@@ -93,51 +93,51 @@ class Car:
         pygame.draw.rect(surf, self.color, rect)
 
 
-# Define objects on the screen
+def main():
+    # Define objects on the screen
+
+    # On-screen objects (mostly rectangles)
+    cars = [
+        Car(1, 4, Color("green"), network),
+        Car(2, 5, Color("blue"), network),
+        Car(3, 3, Color("red"), network),
+        # Car(4, 4),
+        # Car(5, 1)
+    ]
+
+    road = Rect(0, 50, WIDTH, HEIGHT - 100)
+    lanes = [
+        Rect(0, 2 * i * road.top + road.top, WIDTH, LANE_DIVIDER_WIDTH)
+        for i in range(NUM_LANES + 2)
+    ]
+
+    physics_clock = FRAMERATE // PHYSICS_RATE  # Start at max value for first draw
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return  # From main()
+
+        # draw lanes
+        if physics_clock == FRAMERATE // PHYSICS_RATE:
+            physics_clock = 0
+
+            screen.fill(Color("darkgreen"))  # Draw grass
+
+            # draw our road here
+            pygame.draw.rect(screen, Color("black"), road)
+
+            for car in cars:
+                car.draw(screen)
+                car.drive()
+
+            for lane in lanes:
+                pygame.draw.rect(screen, Color("white"), lane)
+
+        pygame.display.update()  # Updates display buffer (redraws window)
+        clock.tick(FRAMERATE)  # Limit framerate
+        physics_clock += 1
 
 
-# On-screen objects (mostly rectangles)
-cars = [
-    Car(1, 4, Color('green'), network, ),
-    Car(2, 5, Color('blue'), network),
-    # Car(3, 3),
-    # Car(4, 4),
-    # Car(5, 1)
-]
-
-road = Rect(0, 50, WIDTH, HEIGHT - 100)
-lanes = [
-    Rect(0, 2 * i * road.top + road.top, WIDTH, LANE_DIVIDER_WIDTH)
-    for i in range(NUM_LANES + 2)
-]
-
-
-
-physics_clock = FRAMERATE // PHYSICS_RATE  # Start at max value for first draw
-
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # draw lanes
-    if physics_clock == FRAMERATE // PHYSICS_RATE:
-        physics_clock = 0
-
-        screen.fill(Color("darkgreen"))  # Draw grass
-
-        # draw our road here
-        pygame.draw.rect(screen, Color("black"), road)
-
-        for car in cars:
-            car.draw(screen)
-            car.drive()
-
-        for lane in lanes:
-            pygame.draw.rect(screen, Color("white"), lane)
-
-
-    pygame.display.update()  # Updates display buffer (redraws window)
-    clock.tick(FRAMERATE)  # Limit framerate
-    physics_clock += 1
+if __name__ == "__main__":
+    main()

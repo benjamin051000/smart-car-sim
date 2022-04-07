@@ -5,6 +5,8 @@ from pygame import Color, Rect
 pygame.init()
 
 WIDTH, HEIGHT = 1200, 600
+FRAMERATE = 60  # Frames per second
+PHYSICS_RATE = 2  # How many times per second the simulation updates (simulation timestep)
 
 NUM_LANES = 4
 LANE_DIVIDER_WIDTH = 10
@@ -110,8 +112,8 @@ lanes = [
 ]
 
 
-physics_count = 60
-first_draw = True
+
+physics_clock = FRAMERATE // PHYSICS_RATE  # Start at max value for first draw
 
 running = True
 while running:
@@ -120,7 +122,9 @@ while running:
             running = False
 
     # draw lanes
-    if physics_count == 60:
+    if physics_clock == FRAMERATE // PHYSICS_RATE:
+        physics_clock = 0
+
         screen.fill(Color("darkgreen"))  # Draw grass
 
         # draw our road here
@@ -133,9 +137,7 @@ while running:
         for lane in lanes:
             pygame.draw.rect(screen, Color("white"), lane)
 
-        physics_count = 0
 
     pygame.display.update()  # Updates display buffer (redraws window)
-    clock.tick(60)  # Limit framerate
-    physics_count += 1
-
+    clock.tick(FRAMERATE)  # Limit framerate
+    physics_clock += 1

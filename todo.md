@@ -1,0 +1,2 @@
+- Car objects need to be able to broadcast and accept intents to and from other cars
+- Intent message (which a car broadcasts to other Cars) includes: - This car's current lane, x position (TODO), Intent

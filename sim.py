@@ -198,11 +198,16 @@ def main():
     ]
 
     physics_clock = FRAMERATE // PHYSICS_RATE  # Start at max value for first draw
-
+    paused = False  # Whether the sim is paused (pauses physics_clock)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return  # From main()
+            elif event.type == pygame.KEYDOWN:
+                # Handle spacebar press to pause sim
+                if event.key == pygame.K_SPACE:
+                    paused = not paused
+                    print(f"{paused=}")
 
         # Draw new frame
         if physics_clock == FRAMERATE // PHYSICS_RATE:
@@ -235,7 +240,9 @@ def main():
 
         pygame.display.update()  # Update display buffer (redraw window)
         clock.tick(FRAMERATE)  # Limit framerate
-        physics_clock += 1
+        
+        if not paused:
+            physics_clock += 1
 
 
 if __name__ == "__main__":

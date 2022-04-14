@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import enum
-from typing import Dict, NewType, Tuple
+from typing import Dict, List, Tuple
 import pygame
 from pygame import Color, Rect
 
@@ -68,6 +68,7 @@ class Car:
 
     @classmethod
     def get_id(cls) -> int:
+        """Get a unique car ID."""
         retval = cls.__car_ids
         cls.__car_ids += 1
         return retval
@@ -75,8 +76,12 @@ class Car:
     def __init__(
         self, current_lane: int, goal_lane: int, color: Color, network: CarNetwork
     ):
+        # Save arguments passed to this object for resetting later
+        self.__initial_state = locals()
+        del self.__initial_state["self"]  # Don't need self for the reset().
+
         # ID of this car for network (basically a MAC address for this car)
-        self.id = self.get_id()
+        self.ID = self.get_id()
 
         # Current lane (y-position on the coordinate grid)
         self.current_lane = current_lane
@@ -91,10 +96,15 @@ class Car:
         # (how quickly the car advances forward per timestep)
         self.x_speed = 1
 
-        self.color = color
+        self.COLOR = color
         self.network = network
 
         self.intent = Intent.NO_CHANGE  # Default: Just keep moving straight ahead.
+
+    def reset(self):
+        """Reset all variables for this car, returning
+        it to its initial state when first constructed."""
+        self.__init__(**self.__initial_state)
 
     def send_intent(self):
         """Send this car's intent into the network. All cars
@@ -113,14 +123,14 @@ class Car:
 
         # Broadcast this to others
         self.network.broadcast_msg(
-            self.id, (self.x_pos, self.current_lane), self.intent
+            self.ID, (self.x_pos, self.current_lane), self.intent
         )
 
     def resolve_conflicts(self):
         """Review intents of other vehicles on the network.
         If any conflicts are detected, change this Car's intent
         according to the agreed upon protocol."""
-        other_cars_intents = self.network.get_messages(self.id)
+        other_cars_intents = self.network.get_messages(self.ID)
         # TODO determine if your intent is feasible/safe given others' intents
         # TODO change intent if issues arise (e.g., collision):
         # WARNING: Be careful how the simulator handles this, cars may not be able
@@ -175,7 +185,7 @@ class Car:
         # Create rect
         rect = Rect(x_pix, y_pix, self.CAR_WIDTH, self.CAR_HEIGHT)
         # Draw that bih
-        pygame.draw.rect(surf, self.color, rect)
+        pygame.draw.rect(surf, self.COLOR, rect)
 
 
 def main():
@@ -184,14 +194,24 @@ def main():
     network = CarNetwork()
 
     # Car spawner: At a timestep (key), spawn the list of cars (value)
-    car_spawner = {
-        0: [Car(1, 4, Color("green"), network), Car(2, 5, Color("blue"), network)],
-        1: [Car(3, 3, Color("red"), network)],
-        3: [Car(5, 2, Color("brown"), network)],
-        5: [Car(2, 4, Color("white"), network), Car(1, 5, Color("orange"), network)],
-    }
+    # Index is each scenario, selected with number input.
+    # TODO refactor into a class or something. Not great impl here
+    car_spawner = [
+        {
+            0: [Car(1, 4, Color("green"), network), Car(2, 5, Color("blue"), network)],
+            1: [Car(3, 3, Color("red"), network)],
+            3: [Car(5, 2, Color("brown"), network)],
+            5: [
+                Car(2, 4, Color("white"), network),
+                Car(1, 5, Color("orange"), network),
+            ],
+        },
+        {0: [Car(2, 3, Color("blue"), network), Car(4, 3, Color("orange"), network)]},
+    ]
+    # Which scenario will be selected from the car spawner?
+    scenario = 0
 
-    cars_on_road = []
+    cars_on_road: List[Car] = []
 
     road = Rect(0, 50, WIDTH, HEIGHT - 100)
     lanes = [
@@ -212,6 +232,30 @@ def main():
                 if event.key == pygame.K_SPACE:
                     paused = not paused
                     print(f"{paused=}")
+                # Handle different scenarios
+                elif event.key == pygame.K_1:
+                    # Reset simulation
+                    cars_on_road.clear()
+                    simtime = 0
+                    scenario = 0
+                    # Reset cars
+                    for cars in car_spawner[scenario].values():
+                        for car in cars:
+                            car.reset()
+                        
+                    print(f"Switching to scenario {scenario+1}")
+
+
+                elif event.key == pygame.K_2:
+                    cars_on_road.clear()
+                    simtime = 0
+                    scenario = 1
+                    # Reset cars
+                    for cars in car_spawner[scenario].values():
+                        for car in cars:
+                            car.reset()
+                    
+                    print(f"Switching to scenario {scenario+1}")
 
         # Draw new frame
         if physics_clock == FRAMERATE // PHYSICS_RATE:
@@ -228,7 +272,7 @@ def main():
 
             # Spawn in new cars, if any.
             try:
-                cars_on_road += car_spawner[simtime]
+                cars_on_road += car_spawner[scenario][simtime]
             except KeyError:
                 pass
 

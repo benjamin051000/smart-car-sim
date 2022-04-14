@@ -253,14 +253,14 @@ class Car:
         # Get new x and y pixel values to draw the line
         
         # X
-        if self.intent == Intent.NO_CHANGE:
-            new_x_pix = X_GRIDSIZE * (self.x_pos + self.x_speed)
-        elif self.intent == Intent.DECELERATE:
+        if self.intent == Intent.DECELERATE:
             new_x_pix = X_GRIDSIZE * (self.x_pos + self.x_speed - 1)
         elif self.intent == Intent.ACCELERATE:
             new_x_pix = X_GRIDSIZE * (self.x_pos + self.x_speed + 1)
         else:
-            new_x_pix = x_pix
+            # In all other cases (including lane changes), the car will move forward one unit.
+            new_x_pix = X_GRIDSIZE * (self.x_pos + self.x_speed)
+
         # Y
         
         if self.intent == Intent.LANE_CHANGE_DOWN:
@@ -276,7 +276,7 @@ class Car:
         y_pix += self.CAR_HEIGHT // 2
         new_y_pix += self.CAR_HEIGHT // 2
         
-        pygame.draw.line(surf, self.COLOR, (x_pix, y_pix), (new_x_pix, new_y_pix), width=2)
+        pygame.draw.line(surf, self.COLOR, (x_pix, y_pix), (new_x_pix, new_y_pix), width=3)
 
 
 def main():
@@ -316,7 +316,7 @@ def main():
 
     simtime = 0  # Keeps track of simulation timestep
 
-    show_intent_lines = False
+    show_intent_lines = True
 
     physics_clock = FRAMERATE / PHYSICS_RATE  # Start at max value for first draw
     paused = False  # Whether the sim is paused (pauses physics_clock)
@@ -395,13 +395,15 @@ def main():
             if show_intent_lines:
                 for car in cars_on_road:
                     car.draw_intent(screen)
-
-            # Cars resolve conflicts with each other.
-            for car in cars_on_road:
-                car.resolve_conflicts()
+        
         # Second sim stage
         elif physics_clock == FRAMERATE / PHYSICS_RATE * 2:
             physics_clock = 0
+            
+            # Cars resolve conflicts with each other.
+            for car in cars_on_road:
+                car.resolve_conflicts()
+            
             if show_intent_lines:
                 for car in cars_on_road:
                     car.draw_intent(screen)

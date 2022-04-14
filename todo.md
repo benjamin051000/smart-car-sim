@@ -1,2 +1,0 @@
-- Intent message (which a car broadcasts to other Cars) includes: - This car's current lane, x position (TODO), Intent
-- Add pause/play simulation user input (spacebar? button click?)

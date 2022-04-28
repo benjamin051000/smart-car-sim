@@ -344,6 +344,7 @@ def main():
                     cars_on_road.clear()
                     simtime = 0
                     scenario = 0
+                    physics_clock = FRAMERATE / PHYSICS_RATE  # Start at max value for first draw
                     # Reset cars
                     for cars in car_spawner[scenario].values():
                         for car in cars:
@@ -356,6 +357,7 @@ def main():
                     cars_on_road.clear()
                     simtime = 0
                     scenario = 1
+                    physics_clock = FRAMERATE / PHYSICS_RATE  # Start at max value for first draw
                     # Reset cars
                     for cars in car_spawner[scenario].values():
                         for car in cars:

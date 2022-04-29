@@ -284,7 +284,7 @@ def main():
     clock = pygame.time.Clock()
     
     # Define objects on the screen
-    network = CarNetwork()
+    net = CarNetwork()
 
     font = pygame.font.SysFont('calibri', 32)
 
@@ -293,15 +293,17 @@ def main():
     # TODO refactor into a class or something. Not great impl here
     car_spawner = [
         {
-            0: [Car(1, 4, "green", network), Car(2, 5, "blue", network)],
-            1: [Car(3, 3, "red", network)],
-            3: [Car(5, 2, "brown", network)],
+            0: [Car(1, 4, "green", net), Car(2, 5, "blue", net)],
+            1: [Car(3, 3, "red", net)],
+            3: [Car(5, 2, "brown", net)],
             5: [
-                Car(2, 4, "white", network),
-                Car(1, 5, "orange", network),
+                Car(2, 4, "white", net),
+                Car(1, 5, "orange", net),
             ],
         },
-        {0: [Car(2, 3, "blue", network), Car(4, 3, "orange", network)]},
+        {0: [Car(2, 3, "blue", net), Car(4, 3, "orange", net)]},
+
+        {0: [Car(1, 5, "white", net), Car(2,5,"blue", net), Car(3,5,"red",net),Car(4,5,"orange",net)]}
     ]
     # Which scenario will be selected from the car spawner?
     try:
@@ -361,6 +363,18 @@ def main():
                     cars_on_road.clear()
                     simtime = 0
                     scenario = 1
+                    physics_clock = FRAMERATE / PHYSICS_RATE  # Start at max value for first draw
+                    # Reset cars
+                    for cars in car_spawner[scenario].values():
+                        for car in cars:
+                            car.reset()
+                    
+                    print(f"Switching to scenario {scenario+1}")
+                
+                elif event.key == pygame.K_3:
+                    cars_on_road.clear()
+                    simtime = 0
+                    scenario = 2
                     physics_clock = FRAMERATE / PHYSICS_RATE  # Start at max value for first draw
                     # Reset cars
                     for cars in car_spawner[scenario].values():

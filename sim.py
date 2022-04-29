@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from distutils.command.config import config
-import enum
+from pprint import pprint
+from enum import Enum
 import sys
 from typing import Dict, List, Tuple
 import pygame
@@ -11,7 +11,7 @@ pygame.init()
 WIDTH, HEIGHT = 1600, 600
 FRAMERATE = 60  # Frames per second
 # How many times per second the simulation updates (simulation timestep)
-PHYSICS_RATE = 1
+PHYSICS_RATE = 2
 
 NUM_LANES = 4
 LANE_DIVIDER_WIDTH = 10
@@ -23,7 +23,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
 
-class Intent(enum.Enum):
+class Intent(Enum):
     """What a car plans on doing in ONE unit of time."""
 
     # Move forward at constant speed.
@@ -41,7 +41,8 @@ class CarNetwork:
     class Message:
         id_: int
         # Horizontal coordinate (on the grid, not pix value)
-        x: int
+        x_pos: int
+        x_speed: int
         # Vertical coordinate (on the grid)
         curr_lane: int
         intent: Intent
@@ -50,16 +51,21 @@ class CarNetwork:
         # key -> car ID, val -> current intent
         self.intents: Dict[int, CarNetwork.Message] = {}
 
-    def broadcast_msg(self, car_id: int, coords: Tuple[int, int], intent: Intent):
+    def broadcast_msg(self, car_id: int, coords: Tuple[int, int], speed: int, intent: Intent):
         """Broadcast an Intent message to other cars."""
         x, lane = coords
-        self.intents[car_id] = self.Message(car_id, x, lane, intent,)
+        self.intents[car_id] = self.Message(car_id, x, speed, lane, intent,)
 
     def get_messages(self, your_id: int) -> Dict[int, Message]:
         """Retrieve messages from other cars that submitted them, excluding your own message."""
         # Return the messages dict without your id (for convenience).
         return {k: v for k, v in self.intents.items() if k != your_id}
 
+def above(lanea, laneb):
+    return lanea > laneb
+
+def below(lanea, laneb):
+    return lanea < laneb
 
 class Car:
 
@@ -137,7 +143,7 @@ class Car:
 
         # Broadcast this to others
         self.network.broadcast_msg(
-            self.ID, (self.x_pos, self.current_lane), self.intent
+            self.ID, (self.x_pos, self.current_lane), self.x_speed, self.intent
         )
 
     def resolve_conflicts(self):
@@ -159,31 +165,35 @@ class Car:
         # cycle and perform the accelerate/decelerate now.
 
         # Any cars at the same horizontal position as this one could have conflicting intents.
-        cars_with_same_x = [msg for carID, msg in other_cars_intents.items() if msg.x == self.x_pos and carID != self.ID]
+        other_cars = [msg for carID, msg in other_cars_intents.items() if carID != self.ID]
         
-        print(f"{self.color_name} car (x={self.x_pos}): {cars_with_same_x=}")
+        print(f"{self.color_name} car (x={self.x_pos}): {other_cars=}")
 
-        def calc_future_lane(intent: Intent, curr_lane: int):
+        def calc_future_position(intent: Intent, curr_lane: int, curr_x: int, curr_speed: int) -> Tuple[int, int]:
             if intent == Intent.LANE_CHANGE_DOWN:
-                return curr_lane + 1
+                new_lane = curr_lane + 1
             elif intent == Intent.LANE_CHANGE_UP:
-                return curr_lane - 1
+                new_lane = curr_lane - 1
             else:
-                return curr_lane
+                new_lane = curr_lane
+            
+            # Calculate new x
+            new_x = curr_x + curr_speed
+            return new_x, new_lane
 
-        my_future_lane = calc_future_lane(self.intent, self.current_lane)
+        my_future_position = calc_future_position(self.intent, self.current_lane, self.x_pos, self.x_speed)
         
         # Do any overlap?
-        conflicting_cars = [msg for msg in cars_with_same_x if calc_future_lane(msg.intent, msg.curr_lane) == my_future_lane]\
+        conflicting_cars = [car for car in other_cars if calc_future_position(car.intent, car.curr_lane, car.x_pos, car.x_speed) == my_future_position]
         # TODO this probably shouldn't be a list, there is only ever 1 scenario where this could happen, right?
-
-        print(f"{self.color_name} car: {conflicting_cars=}")
+        
+        pprint(f"{self.color_name} car: {conflicting_cars=}")
 
         if conflicting_cars:
             # Change intent to avoid a collision!
             # In this scenario, two cars intend on moving into the same lane.
             # Choose next intent based on predefined rules: Left car accelerates, right car decelerates.
-            if self.current_lane < conflicting_cars[0].curr_lane:
+            if above(self.current_lane, conflicting_cars[0].curr_lane):
                 # We are above them. Speed up.
                 self.intent = Intent.ACCELERATE
             else:
@@ -211,7 +221,9 @@ class Car:
 
         elif self.intent == Intent.DECELERATE:
             self.x_speed -= 1
-            assert self.x_speed > 0
+
+            if self.x_speed <= 0: raise AssertionError(f"self.x_speed = {self.x_speed}, should be > 0")
+            
             self.x_pos += self.x_speed
 
 
@@ -283,6 +295,8 @@ def main():
     # Define objects on the screen
 
     network = CarNetwork()
+
+    font = pygame.font.SysFont('calibri', 32)
 
     # Car spawner: At a timestep (key), spawn the list of cars (value)
     # Index is each scenario, selected with number input.
@@ -377,6 +391,12 @@ def main():
             # Draw lanes
             for lane in lanes:
                 pygame.draw.rect(screen, Color("white"), lane)
+            
+            # Display sim stats
+            text = font.render(f"{len(cars_on_road)} cars on road | {simtime=}", True, Color("white"))
+            text_rect = text.get_rect()
+            text_rect.topleft = (0, 0)
+            screen.blit(text, text_rect)
 
             # Spawn in new cars, if any.
             try:
@@ -412,10 +432,23 @@ def main():
 
             # Cars move to new position.
             for car in cars_on_road:
-                car.drive()
+                try:
+                    car.drive()
+                except Exception as e:
+                    paused = True
+                    text = font.render("Error!", True, Color("white"))
+                    text_rect = text.get_rect()
+                    text_rect.center = WIDTH // 2, HEIGHT // 2
+                    screen.blit(text, text_rect)
+                    print("\n\n\nERROR")
+                    print(f"{cars_on_road=}")
+                    # raise e
+
+
 
             print(f"Current simulation time: {simtime}")
             simtime += 1
+
 
         pygame.display.update()  # Update display buffer (redraw window)
         clock.tick(FRAMERATE)  # Limit framerate

@@ -6,8 +6,6 @@ from typing import Dict, List, Tuple
 import pygame
 from pygame import Color, Rect
 
-pygame.init()
-
 WIDTH, HEIGHT = 1600, 600
 FRAMERATE = 60  # Frames per second
 # How many times per second the simulation updates (simulation timestep)
@@ -17,10 +15,6 @@ NUM_LANES = 4
 LANE_DIVIDER_WIDTH = 10
 
 SPEED_LIMIT = 2  # 2 grid spaces per timestep
-
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
 
 
 class Intent(Enum):
@@ -37,8 +31,13 @@ class Intent(Enum):
 
 
 class CarNetwork:
+    """Represents a communications network between cars. 
+    Is basically a dictionary the cars all write to and read from.
+    Cars will interact with the functions in this class to send and
+    receive data with each other."""
     @dataclass
     class Message:
+        """Information cars will send to each other in the CarNetwork."""
         id_: int
         # Horizontal coordinate (on the grid, not pix value)
         x_pos: int
@@ -61,12 +60,6 @@ class CarNetwork:
         # Return the messages dict without your id (for convenience).
         return {k: v for k, v in self.intents.items() if k != your_id}
 
-def above(lanea, laneb):
-    return lanea > laneb
-
-def below(lanea, laneb):
-    return lanea < laneb
-
 class Car:
 
     CAR_WIDTH = 100
@@ -74,7 +67,7 @@ class Car:
 
     CAR_X_START = 0
 
-    # Static class variable, shared across instances, for getting an ID
+    # Static class variable for getting an ID
     __car_ids = 0
 
     @classmethod
@@ -92,7 +85,7 @@ class Car:
         del self.__initial_state["self"]  # Don't need self for the reset().
 
         # ID of this car for network (basically a MAC address for this car)
-        self.ID = self.get_id()
+        self.ID = self.get_id()  # TODO need to save in initial_state!!!
 
         # Current lane (y-position on the coordinate grid)
         self.current_lane = current_lane
@@ -151,23 +144,13 @@ class Car:
         If any conflicts are detected, change this Car's intent
         according to the agreed upon protocol."""
         other_cars_intents = self.network.get_messages(self.ID)
-        # TODO determine if your intent is feasible/safe given others' intents
-        # TODO change intent if issues arise (e.g., collision):
-        # WARNING: Be careful how the simulator handles this, cars may not be able
-        # to move yet if conflicts need to be resolved. But, it would be cool if
-        # our algorithm resolved conflicts without any additional information/message passing,
-        # Which now that I think about it, probably could as long as protocols are defined for
-        # different types of conflicts and their solutions are deterministic (non-random)
-        # E.g., if the conflict is that a Car in lane 3 and a Car in lane 1 both want to merge
-        # to lane 2 but have the same x position, the leftmost car always accelerates and the
-        # rightmost car decelerates. If this always happens, then we should be able to resolve the conflict
-        # this cycle, and next cycle perform the lane change. Just push back the lane change til next
-        # cycle and perform the accelerate/decelerate now.
+        # Determine if your intent is feasible/safe given others' intents, change intent if conflicts are detected.
 
-        # Any cars at the same horizontal position as this one could have conflicting intents.
-        other_cars = [msg for carID, msg in other_cars_intents.items() if carID != self.ID]
+        other_cars = other_cars_intents.values()
         
         print(f"{self.color_name} car (x={self.x_pos}): {other_cars=}")
+
+        # Helper functions
 
         def calc_future_position(intent: Intent, curr_lane: int, curr_x: int, curr_speed: int) -> Tuple[int, int]:
             if intent == Intent.LANE_CHANGE_DOWN:
@@ -180,6 +163,10 @@ class Car:
             # Calculate new x
             new_x = curr_x + curr_speed
             return new_x, new_lane
+
+        # Helper functions for car logic
+        above = lambda a, b: a < b
+        below = lambda a, b: a > b
 
         my_future_position = calc_future_position(self.intent, self.current_lane, self.x_pos, self.x_speed)
         
@@ -292,8 +279,11 @@ class Car:
 
 
 def main():
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    clock = pygame.time.Clock()
+    
     # Define objects on the screen
-
     network = CarNetwork()
 
     font = pygame.font.SysFont('calibri', 32)
